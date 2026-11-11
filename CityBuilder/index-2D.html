@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Builder Simulator 3D</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+#ui {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#topbar {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    background: rgba(20,20,30,.9);
+    border-radius: 9px;
+    padding: 7px 10px;
+    font-size: 14px;
+}
+
+#menu {
+    position: fixed;
+    left: 10px;
+    bottom: 10px;
+    width: 230px;
+    max-height: 72vh;
+    overflow-y: auto;
+    background: rgba(20,20,30,.95);
+    border-radius: 14px;
+    padding: 12px;
+    pointer-events: auto;
+}
+
+#menu h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.buildButton {
+    width: 100%;
+    margin: 4px 0;
+    padding: 9px;
+    border: 0;
+    border-radius: 8px;
+    background: #333b50;
+    color: white;
+    cursor: pointer;
+    text-align: left;
+}
+
+.buildButton:hover {
+    background: #48536d;
+}
+
+.buildButton.selected {
+    background: #2878d8;
+}
+
+.buildButton.locked {
+    opacity: .4;
+}
+
+#actions {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    display: flex;
+    gap: 7px;
+    pointer-events: auto;
+}
+
+.actionButton {
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 13px;
+    background: rgba(20,20,30,.95);
+    color: white;
+    cursor: pointer;
+}
+
+#quest {
+    position: fixed;
+    right: 10px;
+    top: 65px;
+    width: 280px;
+    background: rgba(20,20,30,.94);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+#questTitle {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#questText {
+    font-size: 13px;
+    color: #ddd;
+}
+
+#xpBar {
+    height: 8px;
+    margin-top: 8px;
+    background: #333;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#xpFill {
+    height: 100%;
+    width: 0%;
+    background: #39a9ff;
+}
+
+#message {
+    position: fixed;
+    left: 50%;
+    top: 80px;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.8);
+    padding: 10px 16px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity .2s;
+}
+
+#hint {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.65);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+canvas {
+    display: block;
+    cursor: grab;
+}
+
+canvas:active {
+    cursor: grabbing;
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+
+    <div id="topbar">
+        <div class="stat">🏙️ Level: <b id="level">1</b></div>
+        <div class="stat">⭐ XP: <b id="xp">0</b></div>
+        <div class="stat">💰 $<b id="money">1000</b></div>
+        <div class="stat">👨‍👩‍👧 <b id="population">0</b></div>
+        <div class="stat">😊 <b id="happiness">50</b>%</div>
+        <div class="stat">🏠 <b id="houses">0</b></div>
+        <div class="stat">🚗 <b id="cars">0</b></div>
+        <div class="stat">🕒 <b id="time">08:00</b></div>
+    </div>
+
+    <div id="quest">
+        <div id="questTitle">Quest</div>
+        <div id="questText">Построй 3 дома</div>
+        <div id="xpBar">
+            <div id="xpFill"></div>
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <div id="menu">
+        <h2>🏗️ Construction</h2>
+
+        <button class="buildButton" data-type="house1">
+            🏠 Small House — $100
+        </button>
+
+        <button class="buildButton" data-type="house2">
+            🏡 House — $250
+        </button>
+
+        <button class="buildButton" data-type="house3">
+            🏘️ Large House — $180
+        </button>
+
+        <button class="buildButton" data-type="house4">
+            🏢 Apartment — $500
+        </button>
+
+        <button class="buildButton" data-type="house5">
+            🏙️ Big Apartment — $1000
+        </button>
+
+        <button class="buildButton" data-type="shop">
+            🛒 Shop — $160
+        </button>
+
+        <button class="buildButton" data-type="park">
+            🌳 Park — $80
+        </button>
+
+        <button class="buildButton" data-type="school">
+            🏫 School — $350
+        </button>
+
+        <button class="buildButton" data-type="police">
+            👮 Police Station — $450
+        </button>
+
+        <button class="buildButton" data-type="hospital">
+            🏥 Hospital — $600
+        </button>
+
+        <button class="buildButton" data-type="road">
+            🛣️ Road — $20
+        </button>
+    </div>
+
+    <div id="actions">
+        <button class="actionButton" id="save">💾 Save</button>
+        <button class="actionButton" id="reset">🔄 Reset</button>
+        <button class="actionButton" id="camera">📷 Camera</button>
+    </div>
+
+    <div id="hint">
+        Выбери здание и нажми на клетку. ЛКМ — камера, колесо — zoom.
+    </div>
+
+</div>
+
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+}
+</script>
+
+
+<script type="module">
+
+import * as THREE from "three";
+
+import {
+    OrbitControls
+} from "three/addons/controls/OrbitControls.js";
+
+
+// ======================================================
+// SCENE
+// ======================================================
+
+const scene = new THREE.Scene();
+
+scene.background =
+    new THREE.Color(0x87ceeb);
+
+scene.fog =
+    new THREE.Fog(
+        0x87ceeb,
+        60,
+        150
+    );
+
+
+// ======================================================
+// CAMERA
+// ======================================================
+
+const camera =
+    new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth /
+        window.innerHeight,
+        0.1,
+        500
+    );
+
+camera.position.set(
+    35,
+    35,
+    35
+);
+
+
+// ======================================================
+// RENDERER
+// ======================================================
+
+const renderer =
+    new THREE.WebGLRenderer({
+        antialias: true
+    });
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+renderer.setPixelRatio(
+    Math.min(
+        window.devicePixelRatio,
+        2
+    )
+);
+
+renderer.shadowMap.enabled = true;
+
+document.body.appendChild(
+    renderer.domElement
+);
+
+
+// ======================================================
+// CAMERA CONTROLS
+// ======================================================
+
+const controls =
+    new OrbitControls(
+        camera,
+        renderer.domElement
+    );
+
+controls.target.set(
+    0,
+    0,
+    0
+);
+
+controls.enableDamping = true;
+
+controls.dampingFactor = 0.08;
+
+controls.minDistance = 8;
+
+controls.maxDistance = 100;
+
+controls.maxPolarAngle =
+    Math.PI / 2.05;
+
+controls.screenSpacePanning = true;
+
+
+// ======================================================
+// LIGHT
+// ======================================================
+
+const ambientLight =
+    new THREE.HemisphereLight(
+        0xffffff,
+        0x444444,
+        1.5
+    );
+
+scene.add(
+    ambientLight
+);
+
+
+const sun =
+    new THREE.DirectionalLight(
+        0xffffff,
+        2
+    );
+
+sun.position.set(
+    50,
+    80,
+    30
+);
+
+sun.castShadow = true;
+
+scene.add(
+    sun
+);
+
+
+// ======================================================
+// GAME DATA
+// ======================================================
+
+let money = 1000;
+
+let population = 0;
+
+let happiness = 50;
+
+let level = 1;
+
+let xp = 0;
+
+let gameMinutes = 480;
+
+let city = {};
+
+let selected = "house1";
+
+let completedQuests = [];
+
+
+// ======================================================
+// BUILDINGS
+// ======================================================
+
+const buildings = {
+
+    house1: {
+        name: "Small House",
+        cost: 100,
+        population: 5,
+        unlock: 1,
+        color: 0xffd6a5,
+        height: 3
+    },
+
+    house2: {
+        name: "House",
+        cost: 250,
+        population: 10,
+        unlock: 1,
+        color: 0xffb4a2,
+        height: 5
+    },
+
+    house3: {
+        name: "Large House",
+        cost: 180,
+        population: 15,
+        unlock: 1,
+        color: 0xcaffbf,
+        height: 6
+    },
+
+    house4: {
+        name: "Apartment",
+        cost: 500,
+        population: 30,
+        unlock: 2,
+        color: 0x9bf6ff,
+        height: 11
+    },
+
+    house5: {
+        name: "Big Apartment",
+        cost: 1000,
+        population: 60,
+        unlock: 4,
+        color: 0xbdb2ff,
+        height: 18
+    },
+
+    shop: {
+        name: "Shop",
+        cost: 160,
+        population: 0,
+        unlock: 1,
+        color: 0xffadad,
+        height: 5
+    },
+
+    park: {
+        name: "Park",
+        cost: 80,
+        population: 0,
+        unlock: 1,
+        color: 0x70c470,
+        height: 0.5
+    },
+
+    school: {
+        name: "School",
+        cost: 350,
+        population: 0,
+        unlock: 3,
+        color: 0xffd166,
+        height: 6
+    },
+
+    police: {
+        name: "Police Station",
+        cost: 450,
+        population: 0,
+        unlock: 5,
+        color: 0x4d96ff,
+        height: 5
+    },
+
+    hospital: {
+        name: "Hospital",
+        cost: 600,
+        population: 0,
+        unlock: 6,
+        color: 0xffffff,
+        height: 6
+    },
+
+    road: {
+        name: "Road",
+        cost: 20,
+        population: 0,
+        unlock: 1,
+        color: 0x444444,
+        height: 0.15
+    }
+
+};
+
+
+// ======================================================
+// GRID
+// ======================================================
+
+const GRID_SIZE = 30;
+
+const CELL_SIZE = 4;
+
+
+const ground =
+    new THREE.Mesh(
+        new THREE.PlaneGeometry(
+            GRID_SIZE * CELL_SIZE,
+            GRID_SIZE * CELL_SIZE
+        ),
+        new THREE.MeshStandardMaterial({
+            color: 0x4b8b3b
+        })
+    );
+
+ground.rotation.x =
+    -Math.PI / 2;
+
+ground.receiveShadow = true;
+
+scene.add(
+    ground
+);
+
+
+const gridHelper =
+    new THREE.GridHelper(
+        GRID_SIZE * CELL_SIZE,
+        GRID_SIZE,
+        0xffffff,
+        0x555555
+    );
+
+gridHelper.position.y =
+    0.02;
+
+gridHelper.material.opacity =
+    0.18;
+
+gridHelper.material.transparent =
+    true;
+
+scene.add(
+    gridHelper
+);
+
+
+// ======================================================
+// GROUPS
+// ======================================================
+
+const cityGroup =
+    new THREE.Group();
+
+scene.add(
+    cityGroup
+);
+
+
+const residentGroup =
+    new THREE.Group();
+
+scene.add(
+    residentGroup
+);
+
+
+const carGroup =
+    new THREE.Group();
+
+scene.add(
+    carGroup
+);
+
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+function gridToWorld(x, z) {
+
+    return new THREE.Vector3(
+        x * CELL_SIZE,
+        0,
+        z * CELL_SIZE
+    );
+
+}
+
+
+function key(x, z) {
+
+    return `${x},${z}`;
+
+}
+
+
+function random(min, max) {
+
+    return Math.random() *
+        (max - min) +
+        min;
+
+}
+
+
+// ======================================================
+// CREATE BUILDING
+// ======================================================
+
+function createBuilding(
+    type,
+    x,
+    z
+) {
+
+    const data =
+        buildings[type];
+
+    if (!data) return;
+
+
+    const group =
+        new THREE.Group();
+
+
+    const width =
+        CELL_SIZE * 0.75;
+
+
+    const height =
+        Math.max(
+            data.height,
+            0.2
+        );
+
+
+    const geometry =
+        new THREE.BoxGeometry(
+            width,
+            height,
+            width
+        );
+
+
+    const material =
+        new THREE.MeshStandardMaterial({
+            color: data.color
+        });
+
+
+    const mesh =
+        new THREE.Mesh(
+            geometry,
+            material
+        );
+
+
+    mesh.position.y =
+        height / 2;
+
+    mesh.castShadow = true;
+
+    mesh.receiveShadow = true;
+
+    group.add(
+        mesh
+    );
+
+
+    // ROOF
+
+    if (
+        type.startsWith("house")
+    ) {
+
+        const roof =
+            new THREE.Mesh(
+                new THREE.ConeGeometry(
+                    width * 0.65,
+                    height * 0.35,
+                    4
+                ),
+                new THREE.MeshStandardMaterial({
+                    color: 0x7b3f00
+                })
+            );
+
+
+        roof.position.y =
+            height +
+            height * 0.17;
+
+        roof.rotation.y =
+            Math.PI / 4;
+
+        roof.castShadow = true;
+
+        group.add(
+            roof
+        );
+
+    }
+
+
+    // SHOP SIGN
+
+    if (type === "shop") {
+
+        const sign =
+            new THREE.Mesh(
+                new THREE.BoxGeometry(
+                    2,
+                    .7,
+                    .15
+                ),
+                new THREE.MeshStandardMaterial({
+                    color: 0xffff00
+                })
+            );
+
+        sign.position.set(
+            0,
+            height * .7,
+            -width / 2 - .1
+        );
+
+        group.add(
+            sign
+        );
+
+    }
+
+
+    // SCHOOL FLAG
+
+    if (type === "school") {
+
+        const pole =
+            new THREE.Mesh(
+                new THREE.CylinderGeometry(
+                    .05,
+                    .05,
+                    3
+                ),
+                new THREE.MeshStandardMaterial({
+                    color: 0x777777
+                })
+            );
+
+        pole.position.set(
+            0,
+            height + 1.5,
+            0
+        );
+
+        group.add(
+            pole
+        );
+
+
+        const flag =
+            new THREE.Mesh(
+                new THREE.PlaneGeometry(
+                    1,
+                    .6
+                ),
+                new THREE.MeshStandardMaterial({
+                    color: 0xff3333,
+                    side: THREE.DoubleSide
+                })
+            );
+
+        flag.position.set(
+            .5,
+            height + 2.3,
+            0
+        );
+
+        group.add(
+            flag
+        );
+
+    }
+
+
+    // PARK
+
+    if (type === "park") {
+
+        for (
+            let i = 0;
+            i < 4;
+            i++
+        ) {
+
+            const px =
+                random(
+                    -CELL_SIZE / 2,
+                    CELL_SIZE / 2
+                );
+
+            const pz =
+                random(
+                    -CELL_SIZE / 2,
+                    CELL_SIZE / 2
+                );
+
+
+            const trunk =
+                new THREE.Mesh(
+                    new THREE.CylinderGeometry(
+                        .15,
+                        .2,
+                        1.2
+                    ),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x6b3f20
+                    })
+                );
+
+
+            const tree =
+                new THREE.Mesh(
+                    new THREE.SphereGeometry(
+                        .65,
+                        8,
+                        8
+                    ),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x1f7a1f
+                    })
+                );
+
+
+            trunk.position.set(
+                px,
+                .6,
+                pz
+            );
+
+
+            tree.position.set(
+                px,
+                1.5,
+                pz
+            );
+
+
+            trunk.castShadow = true;
+
+            tree.castShadow = true;
+
+
+            group.add(
+                trunk
+            );
+
+            group.add(
+                tree
+            );
+
+        }
+
+    }
+
+
+    if (type === "road") {
+
+        mesh.material.color.set(
+            0x303030
+        );
+
+    }
+
+
+    const position =
+        gridToWorld(
+            x,
+            z
+        );
+
+
+    group.position.copy(
+        position
+    );
+
+
+    group.userData = {
+        type,
+        x,
+        z
+    };
+
+
+    cityGroup.add(
+        group
+    );
+
+}
+
+
+// ======================================================
+// CLEAR CITY
+// ======================================================
+
+function clearCityVisuals() {
+
+    while (
+        cityGroup.children.length > 0
+    ) {
+
+        cityGroup.remove(
+            cityGroup.children[0]
+        );
+
+    }
+
+}
+
+
+// ======================================================
+// BUILD
+// ======================================================
+
+function build(x, z) {
+
+    const cellKey =
+        key(x, z);
+
+
+    if (city[cellKey]) {
+
+        showMessage(
+            "Эта клетка уже занята!"
+        );
+
+        return;
+
+    }
+
+
+    const building =
+        buildings[selected];
+
+
+    if (!building)
+        return;
+
+
+    if (
+        level < building.unlock
+    ) {
+
+        showMessage(
+            `Открывается на ${building.unlock} уровне`
+        );
+
+        return;
+
+    }
+
+
+    if (
+        money < building.cost
+    ) {
+
+        showMessage(
+            "Недостаточно денег!"
+        );
+
+        return;
+
+    }
+
+
+    money -=
+        building.cost;
+
+
+    city[cellKey] =
+        selected;
+
+
+    createBuilding(
+        selected,
+        x,
+        z
+    );
+
+
+    population +=
+        building.population;
+
+
+    xp += 15;
+
+
+    checkLevelUp();
+
+    updateEconomy();
+
+    updateQuests();
+
+    spawnResidents();
+
+    refreshCars();
+
+    updateUI();
+
+
+    showMessage(
+        `Построено: ${building.name}`
+    );
+
+}
+
+
+// ======================================================
+// LEVEL
+// ======================================================
+
+function requiredXP() {
+
+    return 100 +
+        (level - 1) * 75;
+
+}
+
+
+function checkLevelUp() {
+
+    while (
+        xp >= requiredXP()
+    ) {
+
+        xp -=
+            requiredXP();
+
+        level++;
+
+
+        showMessage(
+            `🎉 Новый уровень: ${level}!`
+        );
+
+    }
+
+}
+
+
+// ======================================================
+// COUNT
+// ======================================================
+
+function countType(type) {
+
+    return Object.values(city)
+        .filter(
+            v => v === type
+        )
+        .length;
+
+}
+
+
+function countHouses() {
+
+    return Object.values(city)
+        .filter(
+            v =>
+                v &&
+                v.startsWith("house")
+        )
+        .length;
+
+}
+
+
+// ======================================================
+// ECONOMY
+// ======================================================
+
+function updateEconomy() {
+
+    const parks =
+        countType("park");
+
+    const shops =
+        countType("shop");
+
+    const schools =
+        countType("school");
+
+    const police =
+        countType("police");
+
+    const hospitals =
+        countType("hospital");
+
+    const roads =
+        countType("road");
+
+
+    happiness = 50;
+
+
+    happiness +=
+        Math.min(
+            parks * 5,
+            20
+        );
+
+
+    happiness +=
+        Math.min(
+            shops * 2,
+            10
+        );
+
+
+    happiness +=
+        Math.min(
+            schools * 4,
+            12
+        );
+
+
+    happiness +=
+        Math.min(
+            police * 5,
+            10
+        );
+
+
+    happiness +=
+        Math.min(
+            hospitals * 6,
+            12
+        );
+
+
+    if (population > 0) {
+
+        const ratio =
+            Math.min(
+                roads /
+                Math.max(
+                    1,
+                    Math.ceil(
+                        population / 10
+                    )
+                ),
+                1
+            );
+
+
+        happiness +=
+            Math.round(
+                ratio * 8
+            );
+
+    }
+
+
+    happiness =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                Math.round(
+                    happiness
+                )
+            )
+        );
+
+}
+
+
+// ======================================================
+// QUESTS
+// ======================================================
+
+const quests = [
+
+    {
+        text: "Построй 3 дома",
+        rewardXP: 100,
+        rewardMoney: 150,
+        check: () =>
+            countHouses() >= 3
+    },
+
+    {
+        text: "Население 25",
+        rewardXP: 150,
+        rewardMoney: 250,
+        check: () =>
+            population >= 25
+    },
+
+    {
+        text: "Построй 6 дорог",
+        rewardXP: 150,
+        rewardMoney: 250,
+        check: () =>
+            countType("road") >= 6
+    },
+
+    {
+        text: "Построй 3 парка",
+        rewardXP: 200,
+        rewardMoney: 300,
+        check: () =>
+            countType("park") >= 3
+    },
+
+    {
+        text: "Школа + 40 населения",
+        rewardXP: 250,
+        rewardMoney: 400,
+        check: () =>
+            countType("school") >= 1 &&
+            population >= 40
+    },
+
+    {
+        text: "Население 80",
+        rewardXP: 300,
+        rewardMoney: 500,
+        check: () =>
+            population >= 80
+    },
+
+    {
+        text: "Построй полицейский участок",
+        rewardXP: 300,
+        rewardMoney: 500,
+        check: () =>
+            countType("police") >= 1
+    },
+
+    {
+        text: "Больница + 100 населения",
+        rewardXP: 500,
+        rewardMoney: 1000,
+        check: () =>
+            countType("hospital") >= 1 &&
+            population >= 100
+    }
+
+];
+
+
+function currentQuest() {
+
+    for (
+        let i = 0;
+        i < quests.length;
+        i++
+    ) {
+
+        if (
+            !completedQuests.includes(i)
+        ) {
+
+            return {
+                index: i,
+                quest: quests[i]
+            };
+
+        }
+
+    }
+
+    return null;
+
+}
+
+
+function updateQuests() {
+
+    const current =
+        currentQuest();
+
+
+    if (!current) {
+
+        document.getElementById(
+            "questText"
+        ).textContent =
+            "Все задания выполнены! 🎉";
+
+        return;
+
+    }
+
+
+    const quest =
+        current.quest;
+
+
+    if (
+        quest.check()
+    ) {
+
+        completedQuests.push(
+            current.index
+        );
+
+
+        money +=
+            quest.rewardMoney;
+
+
+        xp +=
+            quest.rewardXP;
+
+
+        checkLevelUp();
+
+
+        showMessage(
+            `🎯 Квест выполнен! +$${quest.rewardMoney} +${quest.rewardXP} XP`
+        );
+
+
+        updateQuests();
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "questText"
+    ).textContent =
+        quest.text;
+
+}
+
+
+// ======================================================
+// RESIDENTS
+// ======================================================
+
+function clearResidents() {
+
+    while (
+        residentGroup.children.length
+    ) {
+
+        residentGroup.remove(
+            residentGroup.children[0]
+        );
+
+    }
+
+}
+
+
+function createResident(x, z) {
+
+    const group =
+        new THREE.Group();
+
+
+    const body =
+        new THREE.Mesh(
+            new THREE.CapsuleGeometry(
+                .22,
+                .55,
+                4,
+                8
+            ),
+            new THREE.MeshStandardMaterial({
+                color:
+                    Math.random() > .5
+                        ? 0x3498db
+                        : 0xe67e22
+            })
+        );
+
+
+    body.position.y =
+        .6;
+
+
+    group.add(
+        body
+    );
+
+
+    const head =
+        new THREE.Mesh(
+            new THREE.SphereGeometry(
+                .22,
+                8,
+                8
+            ),
+            new THREE.MeshStandardMaterial({
+                color: 0xffc9a9
+            })
+        );
+
+
+    head.position.y =
+        1.15;
+
+
+    group.add(
+        head
+    );
+
+
+    group.position.set(
+        x,
+        0,
+        z
+    );
+
+
+    group.userData.target =
+        new THREE.Vector3(
+            x,
+            0,
+            z
+        );
+
+
+    residentGroup.add(
+        group
+    );
+
+}
+
+
+function spawnResidents() {
+
+    clearResidents();
+
+
+    const houses =
+        Object.entries(city)
+            .filter(
+                ([k, v]) =>
+                    v.startsWith("house")
+            );
+
+
+    let created = 0;
+
+
+    for (
+        const [cellKey, type]
+        of houses
+    ) {
+
+        const [
+            gx,
+            gz
+        ] =
+            cellKey
+                .split(",")
+                .map(Number);
+
+
+        const amount =
+            Math.min(
+                5,
+                Math.max(
+                    1,
+                    Math.ceil(
+                        buildings[type]
+                            .population / 12
+                    )
+                )
+            );
+
+
+        for (
+            let i = 0;
+            i < amount;
+            i++
+        ) {
+
+            const world =
+                gridToWorld(
+                    gx,
+                    gz
+                );
+
+
+            createResident(
+                world.x +
+                    random(-1.2,1.2),
+                world.z +
+                    random(-1.2,1.2)
+            );
+
+
+            created++;
+
+
+            if (
+                created >= 80
+            )
+                return;
+
+        }
+
+    }
+
+}
+
+
+// ======================================================
+// RESIDENT MOVEMENT
+// ======================================================
+
+function updateResidents() {
+
+    residentGroup.children
+        .forEach(
+            resident => {
+
+                const target =
+                    resident.userData.target;
+
+
+                if (
+                    !target ||
+                    resident.position
+                        .distanceTo(target) < .5
+                ) {
+
+                    const places =
+                        Object.entries(city)
+                            .filter(
+                                ([k,v]) =>
+                                    v === "park" ||
+                                    v === "shop" ||
+                                    v === "school"
+                            );
+
+
+                    if (
+                        places.length &&
+                        Math.random() < .7
+                    ) {
+
+                        const place =
+                            places[
+                                Math.floor(
+                                    Math.random() *
+                                    places.length
+                                )
+                            ];
+
+
+                        const [
+                            gx,
+                            gz
+                        ] =
+                            place[0]
+                                .split(",")
+                                .map(Number);
+
+
+                        const p =
+                            gridToWorld(
+                                gx,
+                                gz
+                            );
+
+
+                        target.set(
+                            p.x +
+                                random(-1.3,1.3),
+                            0,
+                            p.z +
+                                random(-1.3,1.3)
+                        );
+
+                    } else {
+
+                        target.set(
+                            resident.position.x +
+                                random(-8,8),
+                            0,
+                            resident.position.z +
+                                random(-8,8)
+                        );
+
+                    }
+
+                }
+
+
+                const direction =
+                    new THREE.Vector3()
+                        .subVectors(
+                            target,
+                            resident.position
+                        );
+
+
+                direction.y = 0;
+
+
+                if (
+                    direction.length() > .1
+                ) {
+
+                    direction.normalize();
+
+
+                    resident.position.add(
+                        direction
+                            .multiplyScalar(.025)
+                    );
+
+
+                    resident.rotation.y =
+                        Math.atan2(
+                            direction.x,
+                            direction.z
+                        );
+
+                }
+
+            }
+        );
+
+}
+
+
+// ======================================================
+// CARS
+// ======================================================
+
+function clearCars() {
+
+    while (
+        carGroup.children.length
+    ) {
+
+        carGroup.remove(
+            carGroup.children[0]
+        );
+
+    }
+
+}
+
+
+function createCar(x,z) {
+
+    const group =
+        new THREE.Group();
+
+
+    const body =
+        new THREE.Mesh(
+            new THREE.BoxGeometry(
+                1.3,
+                .45,
+                2.1
+            ),
+            new THREE.MeshStandardMaterial({
+                color:
+                    Math.random() > .5
+                        ? 0xff3333
+                        : 0x3366ff
+            })
+        );
+
+
+    body.position.y =
+        .45;
+
+    body.castShadow = true;
+
+    group.add(
+        body
+    );
+
+
+    const roof =
+        new THREE.Mesh(
+            new THREE.BoxGeometry(
+                1,
+                .35,
+                1
+            ),
+            new THREE.MeshStandardMaterial({
+                color: 0xdddddd
+            })
+        );
+
+
+    roof.position.y =
+        .8;
+
+
+    group.add(
+        roof
+    );
+
+
+    group.position.set(
+        x,
+        0,
+        z
+    );
+
+
+    group.userData.direction =
+        Math.random() > .5
+            ? 1
+            : -1;
+
+
+    carGroup.add(
+        group
+    );
+
+}
+
+
+function refreshCars() {
+
+    clearCars();
+
+
+    const roads =
+        Object.entries(city)
+            .filter(
+                ([k,v]) =>
+                    v === "road"
+            );
+
+
+    if (
+        roads.length < 2
+    )
+        return;
+
+
+    const amount =
+        Math.min(
+            8,
+            Math.floor(
+                roads.length / 2
+            )
+        );
+
+
+    for (
+        let i = 0;
+        i < amount;
+        i++
+    ) {
+
+        const road =
+            roads[
+                Math.floor(
+                    Math.random() *
+                    roads.length
+                )
+            ];
+
+
+        const [
+            gx,
+            gz
+        ] =
+            road[0]
+                .split(",")
+                .map(Number);
+
+
+        const p =
+            gridToWorld(
+                gx,
+                gz
+            );
+
+
+        createCar(
+            p.x,
+            p.z
+        );
+
+    }
+
+}
+
+
+function updateCars() {
+
+    carGroup.children
+        .forEach(
+            car => {
+
+                car.position.x +=
+                    .035 *
+                    car.userData.direction;
+
+
+                if (
+                    Math.abs(
+                        car.position.x
+                    ) >
+                    GRID_SIZE *
+                    CELL_SIZE /
+                    2
+                ) {
+
+                    car.userData.direction *= -1;
+
+                }
+
+            }
+        );
+
+}
+
+
+// ======================================================
+// DAY / NIGHT
+// ======================================================
+
+function updateDayNight(delta) {
+
+    gameMinutes +=
+        delta * .5;
+
+
+    if (
+        gameMinutes >= 1440
+    ) {
+
+        gameMinutes -=
+            1440;
+
+    }
+
+
+    const hour =
+        gameMinutes / 60;
+
+
+    const angle =
+        ((hour - 6) / 24) *
+        Math.PI * 2;
+
+
+    sun.position.x =
+        Math.cos(angle) * 80;
+
+
+    sun.position.z =
+        Math.sin(angle) * 80;
+
+
+    sun.position.y =
+        Math.max(
+            10,
+            Math.sin(angle) * 70
+        );
+
+
+    const daylight =
+        Math.max(
+            .15,
+            Math.sin(angle) * .9 + .3
+        );
+
+
+    sun.intensity =
+        daylight * 2;
+
+
+    ambientLight.intensity =
+        .5 + daylight;
+
+
+    const sky =
+        new THREE.Color();
+
+
+    if (
+        hour >= 6 &&
+        hour < 18
+    ) {
+
+        sky.set(
+            0x87ceeb
+        );
+
+    } else if (
+        hour >= 18 &&
+        hour < 21
+    ) {
+
+        sky.set(
+            0xe58f65
+        );
+
+    } else {
+
+        sky.set(
+            0x10152f
+        );
+
+    }
+
+
+    scene.background =
+        sky;
+
+    scene.fog.color =
+        sky;
+
+}
+
+
+// ======================================================
+// MONEY
+// ======================================================
+
+let incomeTimer = 0;
+
+
+function updateMoney(delta) {
+
+    incomeTimer +=
+        delta;
+
+
+    if (
+        incomeTimer >= 5
+    ) {
+
+        incomeTimer = 0;
+
+
+        money +=
+            Math.floor(
+                population * .15
+            );
+
+
+        updateUI();
+
+    }
+
+}
+
+
+// ======================================================
+// UI
+// ======================================================
+
+function updateUI() {
+
+    document.getElementById(
+        "level"
+    ).textContent =
+        level;
+
+
+    document.getElementById(
+        "xp"
+    ).textContent =
+        xp;
+
+
+    document.getElementById(
+        "money"
+    ).textContent =
+        Math.floor(money);
+
+
+    document.getElementById(
+        "population"
+    ).textContent =
+        population;
+
+
+    document.getElementById(
+        "happiness"
+    ).textContent =
+        happiness;
+
+
+    document.getElementById(
+        "houses"
+    ).textContent =
+        countHouses();
+
+
+    document.getElementById(
+        "cars"
+    ).textContent =
+        carGroup.children.length;
+
+
+    const hours =
+        Math.floor(
+            gameMinutes / 60
+        );
+
+
+    const minutes =
+        Math.floor(
+            gameMinutes % 60
+        );
+
+
+    document.getElementById(
+        "time"
+    ).textContent =
+        String(hours)
+            .padStart(2,"0")
+        + ":" +
+        String(minutes)
+            .padStart(2,"0");
+
+
+    const needed =
+        requiredXP();
+
+
+    const percent =
+        Math.min(
+            100,
+            xp / needed * 100
+        );
+
+
+    document.getElementById(
+        "xpFill"
+    ).style.width =
+        percent + "%";
+
+
+    updateButtons();
+
+}
+
+
+// ======================================================
+// BUTTONS
+// ======================================================
+
+function updateButtons() {
+
+    document
+        .querySelectorAll(
+            ".buildButton"
+        )
+        .forEach(
+            button => {
+
+                const type =
+                    button.dataset.type;
+
+
+                const building =
+                    buildings[type];
+
+
+                button.classList.toggle(
+                    "selected",
+                    selected === type
+                );
+
+
+                button.classList.toggle(
+                    "locked",
+                    level <
+                    building.unlock
+                );
+
+            }
+        );
+
+}
+
+
+document
+    .querySelectorAll(
+        ".buildButton"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+
+                    selected =
+                        button.dataset.type;
+
+
+                    updateButtons();
+
+
+                    showMessage(
+                        `Выбрано: ${buildings[selected].name}`
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+// ======================================================
+// MESSAGE
+// ======================================================
+
+let messageTimer;
+
+
+function showMessage(text) {
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    message.textContent =
+        text;
+
+
+    message.style.opacity =
+        "1";
+
+
+    clearTimeout(
+        messageTimer
+    );
+
+
+    messageTimer =
+        setTimeout(
+            () => {
+
+                message.style.opacity =
+                    "0";
+
+            },
+            1800
+        );
+
+}
+
+
+// ======================================================
+// RAYCASTING / BUILDING CLICK
+// ======================================================
+
+const raycaster =
+    new THREE.Raycaster();
+
+
+const mouse =
+    new THREE.Vector2();
+
+
+let pointerDownX = 0;
+
+let pointerDownY = 0;
+
+let pointerMoved = false;
+
+
+renderer.domElement.addEventListener(
+    "pointerdown",
+    event => {
+
+        pointerDownX =
+            event.clientX;
+
+        pointerDownY =
+            event.clientY;
+
+        pointerMoved = false;
+
+    }
+);
+
+
+renderer.domElement.addEventListener(
+    "pointermove",
+    event => {
+
+        const dx =
+            event.clientX -
+            pointerDownX;
+
+        const dy =
+            event.clientY -
+            pointerDownY;
+
+
+        if (
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            ) > 6
+        ) {
+
+            pointerMoved = true;
+
+        }
+
+    }
+);
+
+
+renderer.domElement.addEventListener(
+    "pointerup",
+    event => {
+
+        // If camera was moved,
+        // do NOT build.
+
+        if (pointerMoved)
+            return;
+
+
+        // Only left click / touch.
+
+        if (
+            event.pointerType === "mouse" &&
+            event.button !== 0
+        )
+            return;
+
+
+        const rect =
+            renderer.domElement
+                .getBoundingClientRect();
+
+
+        mouse.x =
+            (
+                (event.clientX -
+                rect.left) /
+                rect.width
+            ) * 2 - 1;
+
+
+        mouse.y =
+            -(
+                (event.clientY -
+                rect.top) /
+                rect.height
+            ) * 2 + 1;
+
+
+        raycaster.setFromCamera(
+            mouse,
+            camera
+        );
+
+
+        const hits =
+            raycaster.intersectObject(
+                ground
+            );
+
+
+        if (
+            !hits.length
+        )
+            return;
+
+
+        const point =
+            hits[0].point;
+
+
+        const gx =
+            Math.round(
+                point.x /
+                CELL_SIZE
+            );
+
+
+        const gz =
+            Math.round(
+                point.z /
+                CELL_SIZE
+            );
+
+
+        if (
+            Math.abs(gx) >
+            GRID_SIZE / 2 ||
+            Math.abs(gz) >
+            GRID_SIZE / 2
+        )
+            return;
+
+
+        build(
+            gx,
+            gz
+        );
+
+    }
+);
+
+
+// ======================================================
+// CAMERA RESET
+// ======================================================
+
+document.getElementById(
+    "camera"
+).addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+
+        camera.position.set(
+            35,
+            35,
+            35
+        );
+
+
+        controls.target.set(
+            0,
+            0,
+            0
+        );
+
+
+        controls.update();
+
+    }
+);
+
+
+// ======================================================
+// SAVE
+// ======================================================
+
+function saveGame() {
+
+    const data = {
+
+        money,
+        population,
+        happiness,
+        level,
+        xp,
+        gameMinutes,
+        city,
+        completedQuests
+
+    };
+
+
+    localStorage.setItem(
+        "cityBuilderSave4",
+        JSON.stringify(data)
+    );
+
+
+    showMessage(
+        "💾 Игра сохранена!"
+    );
+
+}
+
+
+document.getElementById(
+    "save"
+).addEventListener(
+    "click",
+    saveGame
+);
+
+
+// ======================================================
+// LOAD
+// ======================================================
+
+function loadGame() {
+
+    const raw =
+        localStorage.getItem(
+            "cityBuilderSave4"
+        );
+
+
+    if (!raw)
+        return;
+
+
+    try {
+
+        const data =
+            JSON.parse(raw);
+
+
+        money =
+            data.money ?? 1000;
+
+        population =
+            data.population ?? 0;
+
+        happiness =
+            data.happiness ?? 50;
+
+        level =
+            data.level ?? 1;
+
+        xp =
+            data.xp ?? 0;
+
+        gameMinutes =
+            data.gameMinutes ?? 480;
+
+        city =
+            data.city ?? {};
+
+        completedQuests =
+            data.completedQuests ?? [];
+
+
+        clearCityVisuals();
+
+
+        for (
+            const cellKey in city
+        ) {
+
+            const [
+                x,
+                z
+            ] =
+                cellKey
+                    .split(",")
+                    .map(Number);
+
+
+            createBuilding(
+                city[cellKey],
+                x,
+                z
+            );
+
+        }
+
+
+        spawnResidents();
+
+        refreshCars();
+
+        updateEconomy();
+
+        updateQuests();
+
+        updateUI();
+
+
+    } catch(error) {
+
+        console.error(
+            error
+        );
+
+    }
+
+}
+
+
+// ======================================================
+// RESET
+// ======================================================
+
+document.getElementById(
+    "reset"
+).addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+
+        if (
+            !confirm(
+                "Удалить весь город?"
+            )
+        )
+            return;
+
+
+        localStorage.removeItem(
+            "cityBuilderSave4"
+        );
+
+
+        money = 1000;
+
+        population = 0;
+
+        happiness = 50;
+
+        level = 1;
+
+        xp = 0;
+
+        gameMinutes = 480;
+
+        city = {};
+
+        completedQuests = [];
+
+
+        clearCityVisuals();
+
+        clearResidents();
+
+        clearCars();
+
+
+        updateUI();
+
+        updateQuests();
+
+
+        showMessage(
+            "🔄 Город сброшен!"
+        );
+
+    }
+);
+
+
+// ======================================================
+// AUTO SAVE
+// ======================================================
+
+setInterval(
+    () => {
+
+        const data = {
+
+            money,
+            population,
+            happiness,
+            level,
+            xp,
+            gameMinutes,
+            city,
+            completedQuests
+
+        };
+
+
+        localStorage.setItem(
+            "cityBuilderSave4",
+            JSON.stringify(data)
+        );
+
+    },
+    30000
+);
+
+
+// ======================================================
+// GAME LOOP
+// ======================================================
+
+let lastTime =
+    performance.now();
+
+
+function animate(currentTime) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const delta =
+        Math.min(
+            .1,
+            (
+                currentTime -
+                lastTime
+            ) / 1000
+        );
+
+
+    lastTime =
+        currentTime;
+
+
+    controls.update();
+
+
+    updateDayNight(
+        delta
+    );
+
+
+    updateMoney(
+        delta
+    );
+
+
+    updateResidents();
+
+    updateCars();
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+}
+
+
+// ======================================================
+// START
+// ======================================================
+
+loadGame();
+
+updateUI();
+
+updateQuests();
+
+animate(
+    performance.now()
+);
+
+
+// ======================================================
+// RESIZE
+// ======================================================
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+
+        camera.updateProjectionMatrix();
+
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+
+    }
+);
+
+</script>
+
+</body>
+</html>
